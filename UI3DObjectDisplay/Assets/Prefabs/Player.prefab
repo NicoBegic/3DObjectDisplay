@@ -49,6 +49,9 @@ MonoBehaviour:
   ObjectDisplayOverlay: {fileID: 0}
   InputText: {fileID: 0}
   DisplayPos: {fileID: 0}
+  InfoBox: {fileID: 0}
+  BackgroundImg: {fileID: 0}
+  RenderCapTex: {fileID: 8400000, guid: b748b7c8be0410a468c9530863da53e9, type: 2}
 --- !u!136 &8854735072880870686
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -178,7 +181,7 @@ MonoBehaviour:
   volumeTrigger: {fileID: 8854735073129280005}
   volumeLayer:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 256
   stopNaNPropagation: 1
   finalBlitToCameraTarget: 0
   antialiasingMode: 0
