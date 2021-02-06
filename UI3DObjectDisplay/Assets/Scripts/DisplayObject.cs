@@ -16,6 +16,7 @@ public class DisplayObject : MonoBehaviour
     private GameObject pickableObject;
 
     private const float MOVE_SPEED = 2;
+    private const float ROT_SPEED = 80;
     private const int ROOM_SIZE = 10;
     private Vector3 DISPLAY_POS = new Vector3(-10, 0, -10);
     private Vector3 lastPos;
@@ -23,6 +24,8 @@ public class DisplayObject : MonoBehaviour
     //ObjectRotation
     private Vector3 prevPos = Vector3.zero;
     private Vector3 deltaPos = Vector3.zero;
+    private bool rotateToTarget = false;
+    private Quaternion targetRotation;
 
     private InfoPoint lastTickedInfP;
 
@@ -63,6 +66,12 @@ public class DisplayObject : MonoBehaviour
                 prevPos = Vector3.zero;
                 deltaPos = Vector3.zero;
                 InfoBox.SetActive(false);
+            }
+
+            if (rotateToTarget)
+            {
+                displayedObject.transform.rotation = Quaternion.RotateTowards(displayedObject.transform.rotation, targetRotation, Time.deltaTime * ROT_SPEED);
+                rotateToTarget = (displayedObject.transform.rotation != targetRotation);
             }
         }
     }
@@ -148,8 +157,8 @@ public class DisplayObject : MonoBehaviour
         float rotAngle = Mathf.Sqrt(Vector3.Dot(parentToTargetDir, parentToTargetDir) * Vector3.Dot(parentToRelTargetDir, parentToRelTargetDir)) + Vector3.Dot(parentToTargetDir, parentToRelTargetDir); //Get rotation angle
         Quaternion inverseRot = new Quaternion(rotAxis.x, rotAxis.y, rotAxis.z, rotAngle).normalized; //Construct new Quaternion
 
-        parentTrans.rotation = Quaternion.Inverse(inverseRot) * parentTrans.rotation; //Apply rotation
-        
+        targetRotation = Quaternion.Inverse(inverseRot) * parentTrans.rotation;
+        rotateToTarget = true;
     }
 
 
