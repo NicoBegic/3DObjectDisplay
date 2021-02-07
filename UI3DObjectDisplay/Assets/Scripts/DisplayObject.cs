@@ -28,6 +28,7 @@ public class DisplayObject : MonoBehaviour
     private Quaternion targetRotation;
 
     private InfoPoint lastTickedInfP;
+    private int lastTickedIndex;
 
     // Update is called once per frame
     void Update()
@@ -40,39 +41,62 @@ public class DisplayObject : MonoBehaviour
                 PickUpObject();
         }//DisplayView
         else
+            DisplayViewUpdate();
+    }
+
+    private void DisplayViewUpdate()
+    {
+        //ObjectRotation
+        if (Input.GetMouseButton(0))
         {
-            //ObjectRotation
-            if (Input.GetMouseButton(0))
+            deltaPos = Input.mousePosition - prevPos;
+            RotateDisplayObject();
+        }
+        prevPos = Input.mousePosition;
+        //InfoPoint Logic
+        if (Input.GetMouseButtonDown(1) || (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.UpArrow)))
+        {
+            ObjectController dispCtr = displayedObject.GetComponent<ObjectController>();
+            GameObject infoPoint = null;
+            if (Input.GetKeyDown(KeyCode.DownArrow))
             {
-                deltaPos = Input.mousePosition - prevPos;
-                RotateDisplayObject();
+                int newIndex = (lastTickedIndex > 0) ? lastTickedIndex - 1 : dispCtr.InfoPoints.Length - 1;
+                infoPoint = dispCtr.InfoPoints[newIndex].gameObject;
+                lastTickedIndex = newIndex;
             }
-            prevPos = Input.mousePosition;
-            //InfoPoint Logic
+            if (Input.GetKeyDown(KeyCode.UpArrow))
+            {
+                int newIndex = (lastTickedIndex < dispCtr.InfoPoints.Length - 1) ? lastTickedIndex + 1 : 0;
+                infoPoint = dispCtr.InfoPoints[newIndex].gameObject;
+                lastTickedIndex = newIndex;
+            }
+            //Maus-Steuerung
             if (Input.GetMouseButtonDown(1))
             {
                 Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
                 RaycastHit hit;
                 if (Physics.Raycast(ray, out hit) && hit.transform.CompareTag("infoPoint"))
-                    ShowInfoPoint(hit.transform.gameObject);
+                    infoPoint = hit.transform.gameObject;
             }
-            //Exit out of DisplayView
-            if (Input.GetKeyDown(KeyCode.Escape))
-            {
-                if (displayedObject)
-                    Destroy(displayedObject);
-                ObjectDisplayOverlay.SetActive(false);
-                transform.position = lastPos;
-                prevPos = Vector3.zero;
-                deltaPos = Vector3.zero;
-                InfoBox.SetActive(false);
-            }
+            if (infoPoint)
+                ShowInfoPoint(infoPoint);
+        }
+        //Exit out of DisplayView
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            if (displayedObject)
+                Destroy(displayedObject);
+            ObjectDisplayOverlay.SetActive(false);
+            transform.position = lastPos;
+            prevPos = Vector3.zero;
+            deltaPos = Vector3.zero;
+            InfoBox.SetActive(false);
+        }
 
-            if (rotateToTarget)
-            {
-                displayedObject.transform.rotation = Quaternion.RotateTowards(displayedObject.transform.rotation, targetRotation, Time.deltaTime * ROT_SPEED);
-                rotateToTarget = (displayedObject.transform.rotation != targetRotation);
-            }
+        if (rotateToTarget)
+        {
+            displayedObject.transform.rotation = Quaternion.RotateTowards(displayedObject.transform.rotation, targetRotation, Time.deltaTime * ROT_SPEED);
+            rotateToTarget = (displayedObject.transform.rotation != targetRotation);
         }
     }
 
@@ -85,6 +109,10 @@ public class DisplayObject : MonoBehaviour
             print(pickableObject.name + " has been picked!");
             displayedObject = Instantiate(pickableObject, DisplayPos);
             displayedObject.transform.localPosition = Vector3.zero;
+            //Skallieren
+            ObjectController picCtr = pickableObject.GetComponent<ObjectController>();
+            displayedObject.transform.localScale = new Vector3(picCtr.DisplaySizeMultiplier, picCtr.DisplaySizeMultiplier, picCtr.DisplaySizeMultiplier);
+
             pickableObject = null;
             lastPos = transform.position;
             transform.position = DISPLAY_POS;

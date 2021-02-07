@@ -5,4 +5,6 @@ using UnityEngine;
 public class ObjectController : MonoBehaviour
 {
     public GameObject UIContainer;
+    public InfoPoint[] InfoPoints;
+    public float DisplaySizeMultiplier = 1;
 }

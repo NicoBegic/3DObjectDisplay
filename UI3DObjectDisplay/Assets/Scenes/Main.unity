@@ -586,6 +586,11 @@ PrefabInstance:
       propertyPath: m_LocalPosition.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1315623381050294333, guid: 80c4cf353e3f4a346af760a2ec9cfb66,
+        type: 3}
+      propertyPath: DisplaySizeMultiplier
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 1530845925469739043, guid: 80c4cf353e3f4a346af760a2ec9cfb66,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -791,6 +796,11 @@ PrefabInstance:
       propertyPath: m_Camera
       value: 
       objectReference: {fileID: 963194227}
+    - target: {fileID: 8939941556485609008, guid: 6139ffec7e1017c4daae0d09cf693bf0,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6139ffec7e1017c4daae0d09cf693bf0, type: 3}
 --- !u!1 &7269138732445939420 stripped
