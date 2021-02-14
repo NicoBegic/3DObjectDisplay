@@ -20,6 +20,7 @@ public class DisplayObject : MonoBehaviour
     private const int ROOM_SIZE = 10;
     private Vector3 DISPLAY_POS = new Vector3(-10, 0, -10);
     private Vector3 lastPos;
+    private Quaternion lastRotation;
 
     //ObjectRotation
     private Vector3 prevPos = Vector3.zero;
@@ -53,8 +54,8 @@ public class DisplayObject : MonoBehaviour
             RotateDisplayObject();
         }
         prevPos = Input.mousePosition;
-        //InfoPoint Logic
-        if (Input.GetMouseButtonDown(1) || (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.UpArrow)))
+        //InfoPoint Input Logic
+        if ((Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.UpArrow)) && !rotateToTarget)
         {
             ObjectController dispCtr = displayedObject.GetComponent<ObjectController>();
             GameObject infoPoint = null;
@@ -70,16 +71,8 @@ public class DisplayObject : MonoBehaviour
                 infoPoint = dispCtr.InfoPoints[newIndex].gameObject;
                 lastTickedIndex = newIndex;
             }
-            //Maus-Steuerung
-            if (Input.GetMouseButtonDown(1))
-            {
-                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-                RaycastHit hit;
-                if (Physics.Raycast(ray, out hit) && hit.transform.CompareTag("infoPoint"))
-                    infoPoint = hit.transform.gameObject;
-            }
             if (infoPoint)
-                ShowInfoPoint(infoPoint);
+                ShowInfoPoint(infoPoint, Input.GetKeyDown(KeyCode.UpArrow));
         }
         //Exit out of DisplayView
         if (Input.GetKeyDown(KeyCode.Escape))
@@ -88,13 +81,14 @@ public class DisplayObject : MonoBehaviour
                 Destroy(displayedObject);
             ObjectDisplayOverlay.SetActive(false);
             transform.position = lastPos;
+            transform.rotation = lastRotation;
             prevPos = Vector3.zero;
             deltaPos = Vector3.zero;
             InfoBox.SetActive(false);
         }
-
+        //Rotate Target around to infoPoint
         if (rotateToTarget)
-        {
+        { 
             displayedObject.transform.rotation = Quaternion.RotateTowards(displayedObject.transform.rotation, targetRotation, Time.deltaTime * ROT_SPEED);
             rotateToTarget = (displayedObject.transform.rotation != targetRotation);
         }
@@ -115,7 +109,9 @@ public class DisplayObject : MonoBehaviour
 
             pickableObject = null;
             lastPos = transform.position;
+            lastRotation = transform.rotation;
             transform.position = DISPLAY_POS;
+            transform.rotation = Quaternion.identity;
             InputText.SetActive(false);
             displayedObject.GetComponent<ObjectController>().UIContainer.SetActive(true);
         }
@@ -141,11 +137,20 @@ public class DisplayObject : MonoBehaviour
 
     private void Move()
     {
-        float moveX = Input.GetAxis("Horizontal") * MOVE_SPEED * Time.deltaTime;
+        float rotate = Input.GetAxis("Horizontal") * MOVE_SPEED * Time.deltaTime;
         float moveZ = Input.GetAxis("Vertical") * MOVE_SPEED * Time.deltaTime;
-        Vector3 newPos = transform.position + new Vector3(moveX, 0, moveZ);
-        if(!(newPos.x > ROOM_SIZE || newPos.z > ROOM_SIZE || newPos.x < 0 || newPos.z < 0))
-            transform.Translate(moveX, 0, moveZ);
+        transform.Rotate(new Vector3(0, rotate * 50, 0));
+        Vector3 newPos = transform.position + (transform.rotation * new Vector3(0, 0, moveZ));
+        if(newPos.x > ROOM_SIZE || newPos.z > ROOM_SIZE || newPos.x < 0 || newPos.z < 0)
+        {
+            if(newPos.x > ROOM_SIZE || newPos.x < 0)
+                newPos.x = (newPos.x > ROOM_SIZE) ? ROOM_SIZE : 0;
+            else
+                newPos.z = (newPos.z > ROOM_SIZE) ? ROOM_SIZE : 0;
+            transform.position = newPos;
+        }
+        else
+            transform.Translate(0, 0, moveZ);
     }
 
     private void RotateDisplayObject()
@@ -156,37 +161,29 @@ public class DisplayObject : MonoBehaviour
         displayedObject.transform.Rotate(Camera.main.transform.right, udDot, Space.World);
     }
 
-    private void ShowInfoPoint(GameObject infoPoint)
+    private void ShowInfoPoint(GameObject infoPoint, bool forward)
     {
         InfoBox.SetActive(true);
         Text info = InfoBox.GetComponentInChildren<Text>();
+         
+        //new
+        Vector2 lastPos = new Vector2(-displayedObject.transform.forward.x, -displayedObject.transform.forward.z);
+        if(lastTickedInfP)
+            lastPos = new Vector2(lastTickedInfP.transform.localPosition.x, lastTickedInfP.transform.localPosition.z);
+        lastPos.Normalize();
+        Vector2 newPos = new Vector2(infoPoint.transform.localPosition.x, infoPoint.transform.localPosition.z);
+        newPos.Normalize();
+        float rotAngle = Vector2.Angle(lastPos, newPos);
+        if ((forward && rotAngle < 0) || (!forward && rotAngle > 0))
+            rotAngle *= -1;
+        targetRotation = Quaternion.AngleAxis(rotAngle, new Vector3(0, 1, 0)) * displayedObject.transform.rotation;
+        rotateToTarget = true;
 
         if (lastTickedInfP)
             lastTickedInfP.ChangeMat(false);
         lastTickedInfP = infoPoint.GetComponent<InfoPoint>();
         info.text = lastTickedInfP.InfoText;
         lastTickedInfP.ChangeMat(true);
-
-        Transform parentTrans = displayedObject.transform;
-        Transform childTrans = infoPoint.transform;
-        Transform targetTrans = Camera.main.transform;
-
-        Vector3 rightAnglePoint = Vector3.Project(parentTrans.position - childTrans.position, childTrans.forward * 5); //Get point to create 90 degree angle for right angle
-        rightAnglePoint = childTrans.position + rightAnglePoint; //transform point to world space
-        float sideC = Vector3.Distance(parentTrans.position, targetTrans.position); //Get hypotenuse
-        float sideA = Vector3.Distance(parentTrans.position, rightAnglePoint); //Get sideA
-        float sideB = Mathf.Sqrt((sideC * sideC) - (sideA * sideA)); //Get sideB. (C squared - A squared = B squared)
-
-        Vector3 desiredRelTargetPos = rightAnglePoint + (childTrans.forward * sideB); //relative target point (if target were to rotate around parent to align with child's forward direction)
-        Vector3 parentToTargetDir = targetTrans.position - parentTrans.position; //parent to target position direction
-        Vector3 parentToRelTargetDir = desiredRelTargetPos - parentTrans.position; //parent to desired target position relative to setup
-
-        Vector3 rotAxis = Vector3.Cross(parentToTargetDir, parentToRelTargetDir); //get rotation axis
-        float rotAngle = Mathf.Sqrt(Vector3.Dot(parentToTargetDir, parentToTargetDir) * Vector3.Dot(parentToRelTargetDir, parentToRelTargetDir)) + Vector3.Dot(parentToTargetDir, parentToRelTargetDir); //Get rotation angle
-        Quaternion inverseRot = new Quaternion(rotAxis.x, rotAxis.y, rotAxis.z, rotAngle).normalized; //Construct new Quaternion
-
-        targetRotation = Quaternion.Inverse(inverseRot) * parentTrans.rotation;
-        rotateToTarget = true;
     }
 
 
